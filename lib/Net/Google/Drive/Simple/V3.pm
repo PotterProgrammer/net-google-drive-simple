@@ -1274,12 +1274,16 @@ sub get_file {
         'http_method' => HTTP_METHOD_GET(),
     };
 
-    if ( $options->{'alt'} eq 'media' ) {
+    if ( exists $options->{'alt'} && $options->{'alt'} eq 'media' ) {
         $info->{'return_http_response'} = 1;
     }
 
     my $response = $self->_handle_api_method( $info, $options );
-    return $response->decoded_content();
+	#  If 'alt' option was specified, return media content
+    return $response->decoded_content() if exists $options->{'alt'};
+
+	#  Otherwise, return the metadata
+	return $response;
 }
 
 ###########################################
@@ -2142,7 +2146,8 @@ sub children {
         $folder_id, $opts, $search_opts
     ) or return;
 
-    return $children;
+	#  If an array was requested, return both the children and the folder ID
+    return wantarray ? ( $children, $folder_id ) : $children;
 }
 
 ###########################################
@@ -2214,6 +2219,14 @@ sub children_by_folder_id {
     }
 
     return \@children;
+}
+
+###########################################
+sub get_file_id { 
+###########################################
+    my ( $self, $path, $opts) = @_;
+	my ( $folder_id, $parent) = $self->_path_resolve( $path, $opts);
+	return ( $folder_id, $parent);
 }
 
 ###########################################
@@ -2690,6 +2703,17 @@ This is also known as C<files.export>.
 
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/export>.
+
+=head2 C<get_file_id>
+
+    my ( $file_id, $parent_id) = $gd->get_file_id( '/path/to/file', {%params})
+	
+The parameters are optional, and are the same parameters the C<files()> method
+receives.
+
+This utility method returns the ID of the named file and the ID of the
+directory in which it resides.  If the named file cannot be found, C<undef>
+values are returned for both IDs.
 
 =head2 C<generateIds>
 
